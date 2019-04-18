@@ -1,4 +1,4 @@
-from ssd_PyT.src import model
+from PyTorch.Detection.SSD.src import model
 from torch.utils.model_zoo import load_url
 
 
