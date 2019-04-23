@@ -18,7 +18,7 @@ def nvidia_ssd(pretrained=True, *args, **kwargs):
     """
     m = ssd.SSD300()
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_SSD_FP32_PyT.pt'
+        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_SSD_FP32_PyT'
         ckpt_file = "ssd_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -29,7 +29,7 @@ def nvidia_ncf(pretrained=True, *args, **kwargs):
     
     m = ncf.NeuMF(nb_users, nb_items, mf_dim, mf_reg, mlp_layer_sizes, mlp_layer_regs, dropout)
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT.pt'
+        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
         ckpt_file = "ncf_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -41,7 +41,7 @@ def nvidia_tacotron2(pretrained=True, *args, **kwargs):
     
     m = tacotron2.Tacotron2()
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP32_PyT.pt'
+        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP32_PyT'
         ckpt_file = "tacotron2_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -52,7 +52,7 @@ def nvidia_waveglow(pretrained=True, *args, **kwargs):
     
     m = waveglow.WaveGlow()
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT.pt'
+        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT'
         ckpt_file = "waveglow_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
