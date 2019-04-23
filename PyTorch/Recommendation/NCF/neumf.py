@@ -32,8 +32,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from logger.logger import LOGGER
-from logger import tags
+from .logger.logger import LOGGER
+from .logger import tags
 
 LOGGER.model = 'ncf'
 

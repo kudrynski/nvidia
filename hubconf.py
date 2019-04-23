@@ -1,5 +1,5 @@
 from PyTorch.Detection.SSD.src import model as ssd
-#from PyTorch.Recommendation.NCF import neumf as ncf
+from PyTorch.Recommendation.NCF import neumf as ncf
 #from PyTorch.SpeechSynthesis.Tacotron2.waveglow import model as waveglow
 #from PyTorch.SpeechSynthesis.Tacotron2.tacotron2 import model as tacotron2
 
@@ -27,13 +27,27 @@ def nvidia_ssd(pretrained=True, *args, **kwargs):
 
 def nvidia_ncf(pretrained=True, *args, **kwargs):
     
-    m = ncf.NeuMF(nb_users, nb_items, mf_dim, mf_reg, mlp_layer_sizes, mlp_layer_regs, dropout)
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
         ckpt_file = "ncf_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
-        m.load_state_dict(ckpt['model'])
+        
+        nb_users = ckpt['module.mf_user_embed.weight'].shape[0]
+        nb_items = ckpt['module.mf_item_embed.weight'].shape[0]
+        mf_dim = ckpt['module.mf_item_embed.weight'].shape[1]
+        mf_reg = 0.
+        mlp_shapes = [ckpt[k].shape for k in ckpt.keys() if 'mlp' in k and 'weight' in k and 'embed' not in k]
+        mlp_layer_sizes = [mlp_shapes[0][1], mlp_shapes[1][1], mlp_shapes[2][1],  mlp_shapes[2][0]]
+        mlp_layer_regs =  [0] * len(mlp_layer_sizes)
+        dropout = 0.5
+
+        m = ncf.NeuMF(nb_users, nb_items, mf_dim, mf_reg, mlp_layer_sizes, mlp_layer_regs, dropout)
+        m.load_state_dict(ckpt)
+    else:
+        pass
+        #m = ncf.NeuMF(nb_users, nb_items, mf_dim, mf_reg, mlp_layer_sizes, mlp_layer_regs, dropout)
+    
     return m
 
 
@@ -75,8 +89,7 @@ def ssd_test():
 def ncf_test():
     hub_model = nvidia_ncf()
     hub_model.eval()
-    inp = torch.randn([1,3,300,300], dtype=torch.float32)
-    out = hub_model.forward(inp)
+    out = hub_model([0,1,2],[0,1,2])
     print(out)
 
 
@@ -98,5 +111,6 @@ def waveglow_test():
 
    
 if __name__ == '__main__':
-    ssd_test()
+    #ssd_test()
+    ncf_test()
 
