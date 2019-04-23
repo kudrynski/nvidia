@@ -8,9 +8,9 @@ import urllib.request
 dependencies = ['torch']
 
 def nvidia_ssd(pretrained=True, *args, **kwargs):
-    """Constructs a SSD300 model. 
+    """Constructs an SSD300 model. 
     For detailed information on model input and output, training recipies, inference and performance 
-    visit: github.com/NVIDIA/DeepLearningExamples and ngc.nvidia.com
+    visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args:
         pretrained (bool): If True, returns a model pretrained on COCO dataset.
@@ -25,17 +25,40 @@ def nvidia_ssd(pretrained=True, *args, **kwargs):
         m.load_state_dict(ckpt['model'])
     return m
 
+
+def unwrap_distributed(state_dict):
+    """
+    Unwraps model from DistributedDataParallel.
+    DDP wraps model in additional "module.", it needs to be removed for single
+    GPU inference.
+    :param state_dict: model's state dict
+    """
+    new_state_dict = {}
+    for key, value in state_dict.items():
+        new_key = key.replace('module.', '')
+        new_state_dict[new_key] = value
+    return new_state_dict
+
 def nvidia_ncf(pretrained=True, *args, **kwargs):
-    
+    """Constructs an NCF model. 
+    For detailed information on model input and output, training recipies, inference and performance 
+    visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
+
+    Args:
+        pretrained (bool): If True, returns a model pretrained on ml-20m dataset.
+ 
+    """
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
         ckpt_file = "ncf_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
-        
-        nb_users = ckpt['module.mf_user_embed.weight'].shape[0]
-        nb_items = ckpt['module.mf_item_embed.weight'].shape[0]
-        mf_dim = ckpt['module.mf_item_embed.weight'].shape[1]
+       
+        ckpt = unwrap_distributed(ckpt)
+
+        nb_users = ckpt['mf_user_embed.weight'].shape[0]
+        nb_items = ckpt['mf_item_embed.weight'].shape[0]
+        mf_dim = ckpt['mf_item_embed.weight'].shape[1]
         mf_reg = 0.
         mlp_shapes = [ckpt[k].shape for k in ckpt.keys() if 'mlp' in k and 'weight' in k and 'embed' not in k]
         mlp_layer_sizes = [mlp_shapes[0][1], mlp_shapes[1][1], mlp_shapes[2][1],  mlp_shapes[2][0]]
@@ -89,7 +112,7 @@ def ssd_test():
 def ncf_test():
     hub_model = nvidia_ncf()
     hub_model.eval()
-    out = hub_model([0,1,2],[0,1,2])
+    out = hub_model(torch.tensor([0,1,2]),torch.tensor([0,1,2]), sigmoid=True)
     print(out)
 
 
