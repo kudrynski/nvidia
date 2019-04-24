@@ -29,7 +29,7 @@ def unwrap_distributed(state_dict):
         new_state_dict[new_key] = value
     return new_state_dict
 
-dependencies = ['torch', 'librosa']
+dependencies = ['torch']
 
 def nvidia_ssd(pretrained=True, *args, **kwargs):
     """Constructs an SSD300 model.
