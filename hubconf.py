@@ -37,8 +37,8 @@ def unwrap_distributed(state_dict):
 dependencies = ['torch', 'librosa']
 
 def nvidia_ssd(pretrained=True, *args, **kwargs):
-    """Constructs an SSD300 model. 
-    For detailed information on model input and output, training recipies, inference and performance 
+    """Constructs an SSD300 model.
+    For detailed information on model input and output, training recipies, inference and performance
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args:
@@ -56,20 +56,20 @@ def nvidia_ssd(pretrained=True, *args, **kwargs):
 
 
 def nvidia_ncf(pretrained=True, *args, **kwargs):
-    """Constructs an NCF model. 
-    For detailed information on model input and output, training recipies, inference and performance 
+    """Constructs an NCF model.
+    For detailed information on model input and output, training recipies, inference and performance
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args:
         pretrained (bool): If True, returns a model pretrained on ml-20m dataset.
- 
+
     """
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
         ckpt_file = "ncf_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
-        
+
         if checkpoint_from_distributed(ckpt):
             ckpt = unwrap_distributed(ckpt)
 
@@ -127,6 +127,10 @@ def nvidia_tacotron2(pretrained=True, *args, **kwargs):
                   'p_attention_dropout': 0.1, 'p_decoder_dropout': 0.1,
                   'postnet_embedding_dim': 512, 'postnet_kernel_size': 5,
                   'postnet_n_convolutions': 5, 'decoder_no_early_stopping': False}
+
+        for k,v in kwargs.items():
+            if k in config.keys():
+                config[k] = v
         m = tacotron2.Tacotron2(**config)
     return m
 
@@ -194,7 +198,7 @@ def tacotron2_test():
     hub_model = nvidia_tacotron2()
     hub_model = hub_model.cuda()
     hub_model.eval()
-    inp = torch.randint(low=0, high=148, size=(1,166), dtype=torch.long)
+    inp = torch.randint(low=0, high=148, size=(1,140), dtype=torch.long)
     inp = torch.autograd.Variable(inp).cuda().long()
     with torch.no_grad():
         _, mel, _, _ = hub_model.inference(inp)
@@ -205,9 +209,11 @@ def waveglow_test():
     print('waveglow test output')
     hub_model = nvidia_waveglow()
     hub_model = hub_model.cuda()
+    hub_model = hub_model.remove_weightnorm(hub_model)
     hub_model.eval()
-    inp = torch.randn([1,80,300], dtype=torch.float32).cuda().half()
-    out = hub_model.infer(inp)
+    inp = torch.randn([1,80,300], dtype=torch.float32).cuda()
+    with torch.no_grad():
+        out = hub_model.infer(inp)
     print(out.size())
 
 
