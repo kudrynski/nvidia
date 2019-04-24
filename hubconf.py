@@ -1,8 +1,3 @@
-from PyTorch.Detection.SSD.src import model as ssd
-from PyTorch.Recommendation.NCF import neumf as ncf
-from PyTorch.SpeechSynthesis.Tacotron2.tacotron2 import model as tacotron2
-from PyTorch.SpeechSynthesis.Tacotron2.waveglow import model as waveglow
-
 import urllib.request
 
 # from https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/SpeechSynthesis/Tacotron2/inference.py
@@ -45,6 +40,8 @@ def nvidia_ssd(pretrained=True, *args, **kwargs):
         pretrained (bool, True): If True, returns a model pretrained on COCO dataset.
     """
 
+    from PyTorch.Detection.SSD.src import model as ssd
+
     m = ssd.SSD300()
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_SSD_FP32_PyT'
@@ -68,6 +65,8 @@ def nvidia_ncf(pretrained=True, *args, **kwargs):
         mlp_layer_sizes (list, [256,256,128,64]): sizes of layers of multi-layer-perceptron
         dropout (float, 0.5): dropout
     """
+
+    from PyTorch.Recommendation.NCF import neumf as ncf
 
     config = {'nb_users':None, 'nb_items':None, 'mf_dim':64, 'mf_reg':0.,
               'mlp_layer_sizes':[256,256,128,64], 'mlp_layer_regs':[0,0,0,0], 'dropout':0.5}
@@ -118,6 +117,9 @@ def nvidia_tacotron2(pretrained=True, *args, **kwargs):
         p_decoder_dropout (float, 0.1): dropout probability on decoder LSTM (2nd LSTM layer in decoder)
         max_decoder_steps (int, 1000): maximum number of generated mel spectrograms during inference
     """
+
+    from PyTorch.SpeechSynthesis.Tacotron2.tacotron2 import model as tacotron2
+
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP32_PyT'
         ckpt_file = "tacotron2_ckpt.pt"
@@ -156,6 +158,9 @@ def nvidia_waveglow(pretrained=True, *args, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pretrained on LJ Speech dataset.
     """
+
+    from PyTorch.SpeechSynthesis.Tacotron2.waveglow import model as waveglow
+
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT'
         ckpt_file = "waveglow_ckpt.pt"
