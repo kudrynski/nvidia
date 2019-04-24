@@ -1,5 +1,6 @@
 import urllib.request
 
+
 # from https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/SpeechSynthesis/Tacotron2/inference.py
 def checkpoint_from_distributed(state_dict):
     """
@@ -15,6 +16,7 @@ def checkpoint_from_distributed(state_dict):
             break
     return ret
 
+
 # from https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/SpeechSynthesis/Tacotron2/inference.py
 def unwrap_distributed(state_dict):
     """
@@ -29,9 +31,11 @@ def unwrap_distributed(state_dict):
         new_state_dict[new_key] = value
     return new_state_dict
 
+
 dependencies = ['torch']
 
-def nvidia_ssd(pretrained=True, *args, **kwargs):
+
+def nvidia_ssd(pretrained=True, **kwargs):
     """Constructs an SSD300 model.
     For detailed information on model input and output, training recipies, inference and performance
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
@@ -52,7 +56,7 @@ def nvidia_ssd(pretrained=True, *args, **kwargs):
     return m
 
 
-def nvidia_ncf(pretrained=True, *args, **kwargs):
+def nvidia_ncf(pretrained=True, **kwargs):
     """Constructs an NCF model.
     For detailed information on model input and output, training recipies, inference and performance
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
@@ -104,8 +108,8 @@ def nvidia_ncf(pretrained=True, *args, **kwargs):
     return m
 
 
-def nvidia_tacotron2(pretrained=True, *args, **kwargs):
-    """Constructs a Tacotron 2 model.
+def nvidia_tacotron2(pretrained=True, **kwargs):
+    """Constructs a Tacotron 2 model (nn.module with additional inference(input) method).
     For detailed information on model input and output, training recipies, inference and performance
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
@@ -150,8 +154,9 @@ def nvidia_tacotron2(pretrained=True, *args, **kwargs):
         m = tacotron2.Tacotron2(**config)
     return m
 
-def nvidia_waveglow(pretrained=True, *args, **kwargs):
-    """Constructs a WaveGlow model.
+
+def nvidia_waveglow(pretrained=True, **kwargs):
+    """Constructs a WaveGlow model (nn.module with additional infer(input) method).
     For detailed information on model input and output, training recipies, inference and performance
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
@@ -187,10 +192,12 @@ def nvidia_waveglow(pretrained=True, *args, **kwargs):
 
 # temporary tests:
 
+
 import torch
 
+
 def ssd_test():
-    print('ssd test output')
+    print('\nssd test output')
     hub_model = nvidia_ssd().cuda()
     hub_model.eval()
     inp = torch.randn([1,3,300,300], dtype=torch.float32).cuda()
@@ -201,7 +208,7 @@ def ssd_test():
 
 
 def ncf_test(**kwargs):
-    print('ncf test output')
+    print('\nncf test output')
     hub_model = nvidia_ncf(**kwargs).cuda()
     hub_model.eval()
     input_users=torch.tensor([0,1,2]).cuda()
@@ -212,7 +219,7 @@ def ncf_test(**kwargs):
 
 
 def tacotron2_test():
-    print('tacotron2 test output')
+    print('\ntacotron2 test output')
     hub_model = nvidia_tacotron2()
     hub_model = hub_model.cuda()
     hub_model.eval()
@@ -224,7 +231,7 @@ def tacotron2_test():
 
 
 def waveglow_test():
-    print('waveglow test output')
+    print('\nwaveglow test output')
     hub_model = nvidia_waveglow()
     hub_model = hub_model.cuda()
     hub_model = hub_model.remove_weightnorm(hub_model)
@@ -236,7 +243,7 @@ def waveglow_test():
 
 
 if __name__ == '__main__':
-    #ssd_test()
+    ssd_test()
     ncf_test()
     ncf_test(pretrained=False, nb_users=100, nb_items=100)
     tacotron2_test()
