@@ -1,3 +1,5 @@
+import sys
+sys.path.append('PyTorch/SpeechSynthesis/Tacotron2/')
 from PyTorch.Detection.SSD.src import model as ssd
 from PyTorch.Recommendation.NCF import neumf as ncf
 from PyTorch.SpeechSynthesis.Tacotron2.tacotron2 import model as tacotron2
