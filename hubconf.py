@@ -42,9 +42,9 @@ def nvidia_ssd(pretrained=True, *args, **kwargs):
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args:
-        pretrained (bool): If True, returns a model pretrained on COCO dataset.
-
+        pretrained (bool, True): If True, returns a model pretrained on COCO dataset.
     """
+
     m = ssd.SSD300()
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_SSD_FP32_PyT'
@@ -61,9 +61,17 @@ def nvidia_ncf(pretrained=True, *args, **kwargs):
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args:
-        pretrained (bool): If True, returns a model pretrained on ml-20m dataset.
-
+        pretrained (bool, True): If True, returns a model pretrained on ml-20m dataset.
+        nb_users (int): number of users
+        nb_items (int): number of items
+        mf_dim (int, 64): dimension of latent space in matrix factorization
+        mlp_layer_sizes (list, [256,256,128,64]): sizes of layers of multi-layer-perceptron
+        dropout (float, 0.5): dropout
     """
+
+    config = {'nb_users':None, 'nb_items':None, 'mf_dim':64, 'mf_reg':0.,
+              'mlp_layer_sizes':[256,256,128,64], 'mlp_layer_regs':[0,0,0,0], 'dropout':0.5}
+
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
         ckpt_file = "ncf_ckpt.pt"
@@ -73,20 +81,26 @@ def nvidia_ncf(pretrained=True, *args, **kwargs):
         if checkpoint_from_distributed(ckpt):
             ckpt = unwrap_distributed(ckpt)
 
-        nb_users = ckpt['mf_user_embed.weight'].shape[0]
-        nb_items = ckpt['mf_item_embed.weight'].shape[0]
-        mf_dim = ckpt['mf_item_embed.weight'].shape[1]
-        mf_reg = 0.
+        config['nb_users'] = ckpt['mf_user_embed.weight'].shape[0]
+        config['nb_items'] = ckpt['mf_item_embed.weight'].shape[0]
+        config['mf_dim'] = ckpt['mf_item_embed.weight'].shape[1]
         mlp_shapes = [ckpt[k].shape for k in ckpt.keys() if 'mlp' in k and 'weight' in k and 'embed' not in k]
-        mlp_layer_sizes = [mlp_shapes[0][1], mlp_shapes[1][1], mlp_shapes[2][1],  mlp_shapes[2][0]]
-        mlp_layer_regs =  [0] * len(mlp_layer_sizes)
-        dropout = 0.5
+        config['mlp_layer_sizes'] = [mlp_shapes[0][1], mlp_shapes[1][1], mlp_shapes[2][1],  mlp_shapes[2][0]]
+        config['mlp_layer_regs'] =  [0] * len(config['mlp_layer_sizes'])
 
-        m = ncf.NeuMF(nb_users, nb_items, mf_dim, mf_reg, mlp_layer_sizes, mlp_layer_regs, dropout)
+        m = ncf.NeuMF(**config)
         m.load_state_dict(ckpt)
+
     else:
-        pass
-        #m = ncf.NeuMF(nb_users, nb_items, mf_dim, mf_reg, mlp_layer_sizes, mlp_layer_regs, dropout)
+        if 'nb_users' not in kwargs:
+            raise ValueError("Missing 'nb_users' argument.")
+        if 'nb_items' not in kwargs:
+            raise ValueError("Missing 'nb_items' argument.")
+        for k,v in kwargs.items():
+            if k in config.keys():
+                config[k] = v
+        config['mlp_layer_regs'] =  [0] * len(config['mlp_layer_sizes'])
+        m = ncf.NeuMF(**config)
 
     return m
 
@@ -94,10 +108,10 @@ def nvidia_ncf(pretrained=True, *args, **kwargs):
 def nvidia_tacotron2(pretrained=True, *args, **kwargs):
     """Constructs a Tacotron 2 model.
     For detailed information on model input and output, training recipies, inference and performance
-    visit: github.com/NVIDIA/DeepLearningExamples and ngc.nvidia.com
+    visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args (type[, default value]):
-        pretrained (bool): If True, returns a model pretrained on COCO dataset.
+        pretrained (bool, True): If True, returns a model pretrained on LJ Speech dataset.
         n_symbols (int, 148): Number of symbols used in a sequence passed to the prenet, see
                               https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/SpeechSynthesis/Tacotron2/tacotron2/text/symbols.py
         p_attention_dropout (float, 0.1): dropout probability on attention LSTM (1st LSTM layer in decoder)
@@ -137,11 +151,10 @@ def nvidia_tacotron2(pretrained=True, *args, **kwargs):
 def nvidia_waveglow(pretrained=True, *args, **kwargs):
     """Constructs a WaveGlow model.
     For detailed information on model input and output, training recipies, inference and performance
-    visit: github.com/NVIDIA/DeepLearningExamples and ngc.nvidia.com
+    visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args:
-        pretrained (bool): If True, returns a model pretrained on COCO dataset.
-
+        pretrained (bool): If True, returns a model pretrained on LJ Speech dataset.
     """
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT'
@@ -173,21 +186,21 @@ import torch
 
 def ssd_test():
     print('ssd test output')
-    hub_model = nvidia_ssd()
+    hub_model = nvidia_ssd().cuda()
     hub_model.eval()
-    inp = torch.randn([1,3,300,300], dtype=torch.float32)
+    inp = torch.randn([1,3,300,300], dtype=torch.float32).cuda()
     with torch.no_grad():
         out = hub_model.forward(inp)
     print(out[0].size())
     print(out[1].size())
 
 
-def ncf_test():
+def ncf_test(**kwargs):
     print('ncf test output')
-    hub_model = nvidia_ncf()
+    hub_model = nvidia_ncf(**kwargs).cuda()
     hub_model.eval()
-    input_users=torch.tensor([0,1,2])
-    input_items=torch.tensor([0,1,2])
+    input_users=torch.tensor([0,1,2]).cuda()
+    input_items=torch.tensor([0,1,2]).cuda()
     with torch.no_grad():
         out = hub_model(input_users, input_items, sigmoid=True)
     print(out.size())
@@ -218,7 +231,8 @@ def waveglow_test():
 
 
 if __name__ == '__main__':
-    ssd_test()
+    #ssd_test()
     ncf_test()
+    ncf_test(pretrained=False, nb_users=100, nb_items=100)
     tacotron2_test()
     waveglow_test()
