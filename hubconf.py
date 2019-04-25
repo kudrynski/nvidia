@@ -27,7 +27,8 @@ def unwrap_distributed(state_dict):
     """
     new_state_dict = {}
     for key, value in state_dict.items():
-        new_key = key.replace('module.', '')
+        new_key = key.replace('module.1.', '')
+        new_key = new_key.replace('module.', '')
         new_state_dict[new_key] = value
     return new_state_dict
 
@@ -42,17 +43,39 @@ def nvidia_ssd(pretrained=True, **kwargs):
 
     Args:
         pretrained (bool, True): If True, returns a model pretrained on COCO dataset.
+        model_math (str, 'fp32'): returns a model in given precision ('fp32' or 'fp16')
     """
 
     from PyTorch.Detection.SSD.src import model as ssd
 
+    fp16 = "model_math" in kwargs and kwargs["model_math"] == "fp16"
+
     m = ssd.SSD300()
+    if fp16:
+        m = m.half()
+
+        def batchnorm_to_float(module):
+            """Converts batch norm to FP32"""
+            if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+                module.float()
+            for child in module.children():
+                batchnorm_to_float(child)
+            return module
+
+        m = batchnorm_to_float(m)
+
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_SSD_FP32_PyT'
+        if fp16:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_SSD_FP16_PyT'
+        else:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_SSD_FP32_PyT'
         ckpt_file = "ssd_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
-        m.load_state_dict(ckpt['model'])
+        ckpt = ckpt['model']
+        if checkpoint_from_distributed(ckpt):
+            ckpt = unwrap_distributed(ckpt)
+        m.load_state_dict(ckpt)
     return m
 
 
@@ -73,11 +96,16 @@ def nvidia_ncf(pretrained=True, **kwargs):
 
     from PyTorch.Recommendation.NCF import neumf as ncf
 
+    fp16 = "model_math" in kwargs and kwargs["model_math"] == "fp16"
+
     config = {'nb_users':None, 'nb_items':None, 'mf_dim':64, 'mf_reg':0.,
               'mlp_layer_sizes':[256,256,128,64], 'mlp_layer_regs':[0,0,0,0], 'dropout':0.5}
 
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
+        if fp16:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP16_PyT'
+        else:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
         ckpt_file = "ncf_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -92,9 +120,6 @@ def nvidia_ncf(pretrained=True, **kwargs):
         config['mlp_layer_sizes'] = [mlp_shapes[0][1], mlp_shapes[1][1], mlp_shapes[2][1],  mlp_shapes[2][0]]
         config['mlp_layer_regs'] =  [0] * len(config['mlp_layer_sizes'])
 
-        m = ncf.NeuMF(**config)
-        m.load_state_dict(ckpt)
-
     else:
         if 'nb_users' not in kwargs:
             raise ValueError("Missing 'nb_users' argument.")
@@ -104,7 +129,14 @@ def nvidia_ncf(pretrained=True, **kwargs):
             if k in config.keys():
                 config[k] = v
         config['mlp_layer_regs'] =  [0] * len(config['mlp_layer_sizes'])
-        m = ncf.NeuMF(**config)
+
+    m = ncf.NeuMF(**config)
+
+    if fp16:
+        m.half()
+
+    if pretrained:
+        m.load_state_dict(ckpt)
 
     return m
 
@@ -127,7 +159,7 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
     from PyTorch.SpeechSynthesis.Tacotron2.tacotron2 import model as tacotron2
     from PyTorch.SpeechSynthesis.Tacotron2.models import lstmcell_to_float, batchnorm_to_float
 
-    fp16 =  "model_math" in kwargs and kwargs["model_math"] == "fp16"
+    fp16 = "model_math" in kwargs and kwargs["model_math"] == "fp16"
 
     if pretrained:
         if fp16:
@@ -225,11 +257,14 @@ def nvidia_waveglow(pretrained=True, **kwargs):
 import torch
 
 
-def ssd_test():
+def ssd_test(**kwargs):
     print('\nssd test output')
-    hub_model = nvidia_ssd().cuda()
+    hub_model = nvidia_ssd(**kwargs).cuda()
     hub_model.eval()
     inp = torch.randn([1,3,300,300], dtype=torch.float32).cuda()
+    fp16 = "model_math" in kwargs and kwargs["model_math"] == "fp16"
+    if fp16:
+        inp = inp.half()
     with torch.no_grad():
         out = hub_model.forward(inp)
     print(out[0].size())
@@ -247,11 +282,9 @@ def ncf_test(**kwargs):
     print(out.size())
 
 
-def tacotron2_test():
+def tacotron2_test(**kwargs):
     print('\ntacotron2 test output')
-    model_math = "fp16"
-    hub_model = nvidia_tacotron2(model_math=model_math)
-    hub_model = hub_model.cuda()
+    hub_model = nvidia_tacotron2(**kwargs).cuda()
     hub_model.eval()
     inp = torch.randint(low=0, high=148, size=(1,140), dtype=torch.long)
     inp = torch.autograd.Variable(inp).cuda().long()
@@ -260,15 +293,14 @@ def tacotron2_test():
     print(mel.size())
 
 
-def waveglow_test():
+def waveglow_test(**kwargs):
     print('\nwaveglow test output')
-    model_math = "fp16"
-    hub_model = nvidia_waveglow(model_math=model_math)
-    hub_model = hub_model.cuda()
+    fp16 = "model_math" in kwargs and kwargs["model_math"] == "fp16"
+    hub_model = nvidia_waveglow(**kwargs).cuda()
     hub_model = hub_model.remove_weightnorm(hub_model)
     hub_model.eval()
     inp = torch.randn([1,80,300], dtype=torch.float32).cuda()
-    if model_math == "fp16":
+    if fp16:
         inp = inp.half()
     with torch.no_grad():
         out = hub_model.infer(inp)
@@ -276,8 +308,23 @@ def waveglow_test():
 
 
 if __name__ == '__main__':
-    # ssd_test()
-    ncf_test()
-    ncf_test(pretrained=False, nb_users=100, nb_items=100)
-    tacotron2_test()
-    waveglow_test()
+    ssd_test(model_math="fp16")
+    ssd_test(model_math="fp32")
+    ssd_test(pretrained=False, model_math="fp16")
+    ssd_test(pretrained=False, model_math="fp32")
+
+
+    ncf_test(model_math="fp16")
+    ncf_test(model_math="fp32")
+    ncf_test(pretrained=False, nb_users=100, nb_items=100, model_math="fp16")
+    ncf_test(pretrained=False, nb_users=100, nb_items=100, model_math="fp32")
+
+    tacotron2_test(model_math="fp16")
+    tacotron2_test(model_math="fp32")
+    tacotron2_test(pretrained=False, model_math="fp16")
+    tacotron2_test(pretrained=False, model_math="fp32")
+
+    waveglow_test(model_math="fp16")
+    waveglow_test(model_math="fp32")
+    waveglow_test(pretrained=False, model_math="fp16")
+    waveglow_test(pretrained=False, model_math="fp32")
