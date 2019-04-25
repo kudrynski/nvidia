@@ -63,6 +63,7 @@ def nvidia_ncf(pretrained=True, **kwargs):
 
     Args:
         pretrained (bool, True): If True, returns a model pretrained on ml-20m dataset.
+        model_math (str, 'fp32'): returns a model in given precision ('fp32' or 'fp16')
         nb_users (int): number of users
         nb_items (int): number of items
         mf_dim (int, 64): dimension of latent space in matrix factorization
@@ -109,12 +110,13 @@ def nvidia_ncf(pretrained=True, **kwargs):
 
 
 def nvidia_tacotron2(pretrained=True, **kwargs):
-    """Constructs a Tacotron 2 model (nn.module with additional inference(input) method).
+    """Constructs a Tacotron 2 model (nn.module with additional infer(input) method).
     For detailed information on model input and output, training recipies, inference and performance
     visit: github.com/NVIDIA/DeepLearningExamples and/or ngc.nvidia.com
 
     Args (type[, default value]):
         pretrained (bool, True): If True, returns a model pretrained on LJ Speech dataset.
+        model_math (str, 'fp32'): returns a model in given precision ('fp32' or 'fp16')
         n_symbols (int, 148): Number of symbols used in a sequence passed to the prenet, see
                               https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/SpeechSynthesis/Tacotron2/tacotron2/text/symbols.py
         p_attention_dropout (float, 0.1): dropout probability on attention LSTM (1st LSTM layer in decoder)
@@ -125,8 +127,13 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
     from PyTorch.SpeechSynthesis.Tacotron2.tacotron2 import model as tacotron2
     from PyTorch.SpeechSynthesis.Tacotron2.models import lstmcell_to_float, batchnorm_to_float
 
+    fp16 =  "model_math" in kwargs and kwargs["model_math"] == "fp16"
+
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP32_PyT'
+        if fp16:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP16_PyT'
+        else:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP32_PyT'
         ckpt_file = "tacotron2_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -134,8 +141,6 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
         if checkpoint_from_distributed(state_dict):
             state_dict = unwrap_distributed(state_dict)
         config = ckpt['config']
-        m = tacotron2.Tacotron2(**config)
-        m.load_state_dict(state_dict)
     else:
         config = {'mask_padding': False, 'n_mel_channels': 80, 'n_symbols': 148,
                   'symbols_embedding_dim': 512, 'encoder_kernel_size': 5,
@@ -148,16 +153,19 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
                   'p_attention_dropout': 0.1, 'p_decoder_dropout': 0.1,
                   'postnet_embedding_dim': 512, 'postnet_kernel_size': 5,
                   'postnet_n_convolutions': 5, 'decoder_no_early_stopping': False}
-
         for k,v in kwargs.items():
             if k in config.keys():
                 config[k] = v
-        m = tacotron2.Tacotron2(**config)
 
-    for k,v in kwargs.items():
-        if k == "model_math" and v == "fp16":
-            m = batchnorm_to_float(m.half())
-            print("for fp16 training, use `model = lstmcell_to_float(model)`")
+    m = tacotron2.Tacotron2(**config)
+
+    if fp16:
+        m = batchnorm_to_float(m.half())
+        # m = lstmcell_to_float(m)
+
+    if pretrained:
+        m.load_state_dict(state_dict)
+
     return m
 
 
@@ -168,12 +176,19 @@ def nvidia_waveglow(pretrained=True, **kwargs):
 
     Args:
         pretrained (bool): If True, returns a model pretrained on LJ Speech dataset.
+        model_math (str, 'fp32'): returns a model in given precision ('fp32' or 'fp16')
     """
 
     from PyTorch.SpeechSynthesis.Tacotron2.waveglow import model as waveglow
     from PyTorch.SpeechSynthesis.Tacotron2.models import batchnorm_to_float
+
+    fp16 = "model_math" in kwargs and kwargs["model_math"] == "fp16"
+
     if pretrained:
-        checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT'
+        if fp16:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP16_PyT'
+        else:
+            checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT'
         ckpt_file = "waveglow_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -181,8 +196,6 @@ def nvidia_waveglow(pretrained=True, **kwargs):
         if checkpoint_from_distributed(state_dict):
             state_dict = unwrap_distributed(state_dict)
         config = ckpt['config']
-        m = waveglow.WaveGlow(**config)
-        m.load_state_dict(state_dict)
     else:
         config = {'n_mel_channels': 80, 'n_flows': 12, 'n_group': 8,
                   'n_early_every': 4, 'n_early_size': 2,
@@ -193,13 +206,17 @@ def nvidia_waveglow(pretrained=True, **kwargs):
                 config[k] = v
             elif k in config['WN_config'].keys():
                 config['WN_config'][k] = v
-        m = waveglow.WaveGlow(**config)
 
-    for k,v in kwargs.items():
-        if k == "model_math" and v == "fp16":
-            m = batchnorm_to_float(m.half())
-            for k in m.convinv:
-                k.float()
+    m = waveglow.WaveGlow(**config)
+
+    if fp16:
+        m = batchnorm_to_float(m.half())
+        for kk in m.convinv:
+            kk.float()
+
+    if pretrained:
+        m.load_state_dict(state_dict)
+
     return m
 
 # temporary tests:
@@ -259,7 +276,7 @@ def waveglow_test():
 
 
 if __name__ == '__main__':
-    ssd_test()
+    # ssd_test()
     ncf_test()
     ncf_test(pretrained=False, nb_users=100, nb_items=100)
     tacotron2_test()
