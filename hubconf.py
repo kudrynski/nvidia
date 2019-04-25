@@ -123,6 +123,7 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
     """
 
     from PyTorch.SpeechSynthesis.Tacotron2.tacotron2 import model as tacotron2
+    from PyTorch.SpeechSynthesis.Tacotron2.models import lstmcell_to_float, batchnorm_to_float
 
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP32_PyT'
@@ -152,6 +153,11 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
             if k in config.keys():
                 config[k] = v
         m = tacotron2.Tacotron2(**config)
+
+    for k,v in kwargs.items():
+        if k == "model_math" and v == "fp16":
+            m = batchnorm_to_float(m.half())
+            print("for fp16 training, use `model = lstmcell_to_float(model)`")
     return m
 
 
@@ -165,7 +171,7 @@ def nvidia_waveglow(pretrained=True, **kwargs):
     """
 
     from PyTorch.SpeechSynthesis.Tacotron2.waveglow import model as waveglow
-
+    from PyTorch.SpeechSynthesis.Tacotron2.models import batchnorm_to_float
     if pretrained:
         checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT'
         ckpt_file = "waveglow_ckpt.pt"
@@ -188,6 +194,12 @@ def nvidia_waveglow(pretrained=True, **kwargs):
             elif k in config['WN_config'].keys():
                 config['WN_config'][k] = v
         m = waveglow.WaveGlow(**config)
+
+    for k,v in kwargs.items():
+        if k == "model_math" and v == "fp16":
+            m = batchnorm_to_float(m.half())
+            for k in m.convinv:
+                k.float()
     return m
 
 # temporary tests:
@@ -220,23 +232,27 @@ def ncf_test(**kwargs):
 
 def tacotron2_test():
     print('\ntacotron2 test output')
-    hub_model = nvidia_tacotron2()
+    model_math = "fp16"
+    hub_model = nvidia_tacotron2(model_math=model_math)
     hub_model = hub_model.cuda()
     hub_model.eval()
     inp = torch.randint(low=0, high=148, size=(1,140), dtype=torch.long)
     inp = torch.autograd.Variable(inp).cuda().long()
     with torch.no_grad():
-        _, mel, _, _ = hub_model.inference(inp)
+        _, mel, _, _ = hub_model.infer(inp)
     print(mel.size())
 
 
 def waveglow_test():
     print('\nwaveglow test output')
-    hub_model = nvidia_waveglow()
+    model_math = "fp16"
+    hub_model = nvidia_waveglow(model_math=model_math)
     hub_model = hub_model.cuda()
     hub_model = hub_model.remove_weightnorm(hub_model)
     hub_model.eval()
     inp = torch.randn([1,80,300], dtype=torch.float32).cuda()
+    if model_math == "fp16":
+        inp = inp.half()
     with torch.no_grad():
         out = hub_model.infer(inp)
     print(out.size())
