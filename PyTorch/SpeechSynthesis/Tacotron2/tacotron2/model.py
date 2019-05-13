@@ -378,7 +378,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def decode(self, decoder_input, is_infer=False):
+    def decode(self, decoder_input):
         """ Decoder step using stored states, attention and memory
         PARAMS
         ------
@@ -393,12 +393,8 @@ class Decoder(nn.Module):
         cell_input = torch.cat((decoder_input, self.attention_context), -1)
         attention_hidden_dtype = self.attention_hidden.dtype
 
-        if is_infer:
-            self.attention_hidden, self.attention_cell = self.attention_rnn(
-                cell_input, (self.attention_hidden, self.attention_cell))
-        else:
-            self.attention_hidden, self.attention_cell = self.attention_rnn(
-                cell_input.float(), (self.attention_hidden.float(), self.attention_cell.float()))
+        self.attention_hidden, self.attention_cell = self.attention_rnn(
+            cell_input.float(), (self.attention_hidden.float(), self.attention_cell.float()))
 
         self.attention_hidden = F.dropout(
             self.attention_hidden, self.p_attention_dropout, self.training)
@@ -421,13 +417,9 @@ class Decoder(nn.Module):
             (self.attention_hidden, self.attention_context), -1)
         decoder_hidden_dtype = self.decoder_hidden.dtype
 
-        if is_infer:
-            self.decoder_hidden, self.decoder_cell = self.decoder_rnn(
-                decoder_input, (self.decoder_hidden, self.decoder_cell))
-        else:
-            self.decoder_hidden, self.decoder_cell = self.decoder_rnn(
-                decoder_input.float(), (self.decoder_hidden.float(), self.decoder_cell.float()))
-            
+        self.decoder_hidden, self.decoder_cell = self.decoder_rnn(
+            decoder_input.float(), (self.decoder_hidden.float(), self.decoder_cell.float()))
+
         self.decoder_hidden = F.dropout(
             self.decoder_hidden, self.p_decoder_dropout, self.training)
 
@@ -542,7 +534,7 @@ class Decoder(nn.Module):
         mel_outputs, gate_outputs, alignments = [], [], []
         while True:
             decoder_input = self.prenet(decoder_input)
-            mel_output, gate_output, alignment = self.decode(decoder_input, is_infer=True)
+            mel_output, gate_output, alignment = self.decode(decoder_input)
 
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
