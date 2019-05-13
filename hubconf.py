@@ -197,7 +197,7 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
 
     if fp16:
         m = batchnorm_to_float(m.half())
-        # m = lstmcell_to_float(m)
+        m = lstmcell_to_float(m)
 
     if pretrained:
         m.load_state_dict(state_dict)
