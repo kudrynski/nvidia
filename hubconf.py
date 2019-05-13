@@ -104,8 +104,10 @@ def nvidia_ncf(pretrained=True, **kwargs):
     if pretrained:
         if fp16:
             checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP16_PyT'
+            checkpoint = 'https://developer.nvidia.com/joc-ncf-fp16-pyt-20190225'
         else:
             checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_NCF_FP32_PyT'
+            checkpoint = 'https://developer.nvidia.com/joc-ncf-fp32-pyt-20190225'
         ckpt_file = "ncf_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -164,8 +166,10 @@ def nvidia_tacotron2(pretrained=True, **kwargs):
     if pretrained:
         if fp16:
             checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP16_PyT'
+            checkpoint = 'https://developer.nvidia.com/joc-tacotron2-fp16-pyt-20190306'
         else:
             checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_Tacotron2_FP32_PyT'
+            checkpoint = 'https://developer.nvidia.com/joc-tacotron2-fp32-pyt-20190306'
         ckpt_file = "tacotron2_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
@@ -219,8 +223,10 @@ def nvidia_waveglow(pretrained=True, **kwargs):
     if pretrained:
         if fp16:
             checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP16_PyT'
+            checkpoint = 'https://developer.nvidia.com/joc-waveglow-fp16-pyt-20190306'
         else:
             checkpoint = 'http://kkudrynski-dt1.vpn.dyn.nvidia.com:5000/download/models/JoC_WaveGlow_FP32_PyT'
+            checkpoint = 'https://developer.nvidia.com/joc-waveglow-fp32-pyt-20190306'
         ckpt_file = "waveglow_ckpt.pt"
         urllib.request.urlretrieve(checkpoint, ckpt_file)
         ckpt = torch.load(ckpt_file)
