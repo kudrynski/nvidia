@@ -25,9 +25,13 @@
 #
 # *****************************************************************************
 
+import torch
+import sys
+from os.path import abspath, dirname
+# enabling modules discovery from global entrypoint
+sys.path.append(abspath(dirname(__file__)+'/'))
 from tacotron2.model import Tacotron2
 from waveglow.model import WaveGlow
-import torch
 
 
 def parse_model_args(model_name, parser, add_help=False):
